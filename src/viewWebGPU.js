@@ -189,7 +189,7 @@ export default class View {
     this.panelWidth = this.width / 3;
     this.panelHeight = this.heigh;
 
-    this.element.appendChild(this.canvasWebGPU);
+    //this.element.appendChild(this.canvasWebGPU);
 
     this.state = {
       playfield: [
@@ -216,8 +216,14 @@ export default class View {
       ],
     };
     this.blockData = {};
-
-    this.preRender();
+    if (this.isWebGPU.result) {
+      this.element.appendChild(this.canvasWebGPU);
+      this.preRender();
+    } else {
+      let divError = document.createElement("div");
+      divError.innerText = this.isWebGPU.description;
+      this.element.appendChild(divError);
+    }
   }
 
   renderMainScreen(state) {
@@ -689,16 +695,18 @@ export default class View {
   }
 
   CheckWebGPU = () => {
-    let result = "Great, your current browser supports WebGPU!";
+    let description = "Great, your current browser supports WebGPU!";
+    let result = true;
     if (!navigator.gpu) {
-      result = `Your current browser does not support WebGPU! Make sure you are on a system 
+      description = `Your current browser does not support WebGPU! Make sure you are on a system 
                          with WebGPU enabled. Currently, SPIR-WebGPU is only supported in  
                          <a href="https://www.google.com/chrome/canary/">Chrome canary</a>
                          with the flag "enable-unsafe-webgpu" enabled. See the 
                          <a href="https://github.com/gpuweb/gpuweb/wiki/Implementation-Status"> 
                          Implementation Status</a> page for more details.                   
                         `;
+      result = false;
     }
-    return result;
+    return { result, description };
   };
 }
