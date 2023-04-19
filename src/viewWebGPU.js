@@ -60,24 +60,24 @@ const Shaders = () => {
   params.isPhong = "1";
 
   const vertex = `
-            [[block]] struct Uniforms {
-                viewProjectionMatrix : mat4x4<f32>;
-                modelMatrix : mat4x4<f32>;
-                normalMatrix : mat4x4<f32>;  
-                colorVertex : vec4<f32>;              
+            struct Uniforms {
+                viewProjectionMatrix : mat4x4<f32>,
+                modelMatrix : mat4x4<f32>,
+                normalMatrix : mat4x4<f32>,  
+                colorVertex : vec4<f32>              
             };
-            [[binding(0), group(0)]] var<uniform> uniforms : Uniforms;
+            @binding(0) @group(0) var<uniform> uniforms : Uniforms;
 
             struct Output {
-                [[builtin(position)]] Position : vec4<f32>;
-                [[location(0)]] vPosition : vec4<f32>;
-                [[location(1)]] vNormal : vec4<f32>;
-                [[location(2)]] vColor : vec4<f32>;             
+                @builtin(position) Position : vec4<f32>,
+                @location(0) vPosition : vec4<f32>,
+                @location(1) vNormal : vec4<f32>,
+                @location(2) vColor : vec4<f32>             
               
             };
-
-            [[stage(vertex)]]
-            fn main([[location(0)]] position: vec4<f32>, [[location(1)]] normal: vec4<f32>) -> Output {
+          
+            @vertex
+            fn main(@location(0) position: vec4<f32>, @location(1) normal: vec4<f32>) -> Output {
                 var output: Output;
                 let mPosition:vec4<f32> = uniforms.modelMatrix * position;
                 output.vPosition = mPosition;
@@ -88,15 +88,15 @@ const Shaders = () => {
             }`;
 
   const fragment = `
-            [[block]] struct Uniforms {
-                lightPosition : vec4<f32>;
-                eyePosition : vec4<f32>;
-                color : vec4<f32>;
+            struct Uniforms {
+                lightPosition : vec4<f32>,
+                eyePosition : vec4<f32>,
+                color : vec4<f32>
             };
-            [[binding(1), group(0)]] var<uniform> uniforms : Uniforms;
+            @binding(1) @group(0) var<uniform> uniforms : Uniforms;
 
-            [[stage(fragment)]]
-            fn main([[location(0)]] vPosition: vec4<f32>, [[location(1)]] vNormal: vec4<f32>,[[location(2)]] vColor: vec4<f32>) ->  [[location(0)]] vec4<f32> {
+            @fragment
+            fn main(@location(0) vPosition: vec4<f32>, @location(1) vNormal: vec4<f32>,@location(2) vColor: vec4<f32>) ->  @location(0) vec4<f32> {
                
               let N:vec3<f32> = normalize(vNormal.xyz);
                 let L:vec3<f32> = normalize(uniforms.lightPosition.xyz - vPosition.xyz);
@@ -272,7 +272,8 @@ export default class View {
       this.canvasWebGPU.width * devicePixelRatio,
       this.canvasWebGPU.height * devicePixelRatio,
     ];
-    const presentationFormat = this.ctxWebGPU.getPreferredFormat(adapter);
+   // const presentationFormat = this.ctxWebGPU.getPreferredFormat(adapter);
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
     this.ctxWebGPU.configure({
       device: this.device,
@@ -288,6 +289,8 @@ export default class View {
     this.normalBuffer = this.CreateGPUBuffer(this.device, cubeData.normals);
 
     this.pipeline = this.device.createRenderPipeline({
+      label: 'main pipeline',
+      layout: "auto",
       vertex: {
         module: this.device.createShaderModule({
           code: shader.vertex,
@@ -401,15 +404,17 @@ export default class View {
         {
           view: textureView,
           loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }, //background color
+          loadOp: 'clear',
           storeOp: "store",
         },
       ],
       depthStencilAttachment: {
         view: depthTexture.createView(),
-        depthLoadValue: 1.0,
-        depthStoreOp: "store",
-        stencilLoadValue: 0,
-        stencilStoreOp: "store",
+        depthClearValue: 1.0,
+        depthLoadOp: 'clear',
+        depthStoreOp: 'store'
+        // stencilLoadValue: 0,
+        // stencilStoreOp: "store",
       },
     };
 
@@ -451,14 +456,16 @@ export default class View {
           view: textureView,
           loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }, //background color
           storeOp: "store",
+          loadOp: 'clear',
         },
       ],
       depthStencilAttachment: {
         view: depthTexture.createView(),
-        depthLoadValue: 1.0,
-        depthStoreOp: "store",
-        stencilLoadValue: 0,
-        stencilStoreOp: "store",
+        depthClearValue: 1.0,
+        depthLoadOp: 'clear',
+        depthStoreOp: 'store'
+        // stencilLoadValue: 0,
+        // stencilStoreOp: "store",
       },
     };
 
@@ -486,7 +493,7 @@ export default class View {
       passEncoder.draw(this.numberOfVertices);
     }
 
-    passEncoder.endPass();
+    passEncoder.end();
     this.device.queue.submit([commandEncoder.finish()]);
     requestAnimationFrame(this.Frame);
   };
@@ -512,6 +519,7 @@ export default class View {
         let colorBlockindex = playfield[row][colom];
 
         let uniformBindGroup_next = this.device.createBindGroup({
+          label : 'uniformBindGroup_next',
           layout: this.pipeline.getBindGroupLayout(0),
           entries: [
             {
@@ -630,6 +638,7 @@ export default class View {
         }
 
         let uniformBindGroup_next = this.device.createBindGroup({
+          label : "uniformBindGroup_next 635",
           layout: this.pipeline.getBindGroupLayout(0),
           entries: [
             {
